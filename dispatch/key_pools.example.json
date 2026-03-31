@@ -1,0 +1,41 @@
+{
+  "pools": [
+    {
+      "id": "alpha_litellm",
+      "base_url": "http://litellm-proxy:4000",
+      "api_key_env": "LITELLM_API_KEY",
+      "api_key_default": "",
+      "weight": 40,
+      "daily_budget_usd": 30,
+      "soft_limit_usd": 25,
+      "hard_limit_usd": 35,
+      "failover_to": ["alpha_openrouter", "beta_gpu"],
+      "dispatch": "http",
+      "models": ["gemini-2.5-flash", "gemini-2.0-flash", "gpt-4.1-mini", "gpt-4.1-nano", "claude-sonnet-4-5"],
+      "free_models_first": false,
+      "gpu_local": false,
+      "notes": "Primary LiteLLM proxy — routes to your configured providers"
+    },
+    {
+      "id": "alpha_openrouter",
+      "base_url": "https://openrouter.ai/api/v1",
+      "api_key_env": "OPENROUTER_API_KEY",
+      "api_key_default": "",
+      "weight": 30,
+      "daily_budget_usd": 10,
+      "soft_limit_usd": 8,
+      "hard_limit_usd": 12,
+      "failover_to": ["beta_gpu", "gamma_keys"],
+      "dispatch": "http",
+      "models": ["meta-llama/llama-3.3-70b-instruct:free", "mistralai/mistral-small-3.1-24b-instruct:free", "google/gemini-2.5-flash", "deepseek/deepseek-chat-v3.1"],
+      "free_models_first": true,
+      "gpu_local": false,
+      "notes": "OpenRouter — 300+ models, use free_models_first for bulk tasks"
+    }
+  ],
+  "gpu_first_tasks": ["code_generation", "code_review"],
+  "task_tier_map": {
+    "classification": "free",
+    "summarization": "cheap"
+  }
+}

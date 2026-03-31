@@ -1,0 +1,16 @@
+{
+  "agents": {
+    "alpha": {
+      "name": "Alpha",
+      "emoji": "🅰️",
+      "a2a_url": "http://YOUR_AGENT_IP:8200/a2a",
+      "token": "YOUR_TOKEN_HERE",
+      "totp_seed": "YOUR_TOTP_SEED_HERE"
+    },
+    "beta": {
+      "name": "Beta",
+      "emoji": "🅱️",
+      "totp_seed": "YOUR_TOTP_SEED_HERE"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+.env
+key_pools.json
+agent_registry.json
+*.totp_state.json
+secrets.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/

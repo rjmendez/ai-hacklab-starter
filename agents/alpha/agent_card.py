@@ -1,0 +1,1 @@
+"""Alpha agent card — coordinator archetype."""
