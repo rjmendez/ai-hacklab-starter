@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"derive":["ULE","VarULE"],"enum":["UleError"],"mod":["custom","tuple","tuplevar","vartuple"],"struct":["CharULE","MultiFieldsULE","NichedOption","OptionULE","OptionVarULE","RawBytesULE"],"trait":["AsULE","EncodeAsVarULE","EqULE","NicheBytes","SliceAsULE","ULE","VarULE"],"union":["NichedOptionULE"]};

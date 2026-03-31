@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["tokio"],"struct":["Connection","ConnectionManager","Monitor","MultiplexedConnection","PubSub"],"trait":["AsyncStream","ConnectionLike"]};

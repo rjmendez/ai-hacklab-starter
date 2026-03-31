@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"attr":["make_ule","make_varule"],"macro":["impl_ule_from_array","zeroslice","zerovec"],"mod":["ule","vecs"],"struct":["VarZeroCow","VarZeroSlice","VarZeroVec","ZeroSlice","ZeroVec"]};
