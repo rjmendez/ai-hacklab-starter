@@ -1,0 +1,56 @@
+# LiteLLM Proxy Configuration
+# Copy to litellm_config.yaml and fill in your API keys.
+# Reference: https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  # Google Gemini (recommended default — cheap and fast)
+  - model_name: gemini-2.5-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GOOGLE_API_KEY
+
+  - model_name: gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GOOGLE_API_KEY
+
+  # OpenAI
+  - model_name: gpt-4.1-mini
+    litellm_params:
+      model: openai/gpt-4.1-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4.1-nano
+    litellm_params:
+      model: openai/gpt-4.1-nano
+      api_key: os.environ/OPENAI_API_KEY
+
+  # Anthropic (premium — use sparingly)
+  - model_name: claude-sonnet-4-5
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Local Ollama (GPU agent) — $0 cost
+  # Uncomment and set YOUR_OLLAMA_HOST to your beta agent's host
+  # - model_name: llama3.1:70b
+  #   litellm_params:
+  #     model: ollama/llama3.1:70b
+  #     api_base: http://YOUR_OLLAMA_HOST:11434
+
+  # - model_name: deepseek-coder-v2
+  #   litellm_params:
+  #     model: ollama/deepseek-coder-v2
+  #     api_base: http://YOUR_OLLAMA_HOST:11434
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 60
+  # Retry failed requests up to 2 times
+  num_retries: 2
+
+general_settings:
+  master_key: os.environ/LITELLM_API_KEY
+  # Optional: daily spend limit across all keys
+  # max_budget: 50
+  # budget_duration: 1d
