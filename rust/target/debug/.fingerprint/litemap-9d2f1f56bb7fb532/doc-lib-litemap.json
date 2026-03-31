@@ -1,0 +1,1 @@
+{"rustc":5391851738765093524,"features":"[]","declared_features":"[\"alloc\", \"databake\", \"default\", \"serde\", \"testing\", \"yoke\"]","target":6548088149557820361,"profile":9102090753619238930,"path":1633830117707583310,"deps":[],"local":[{"Precalculated":"0.8.1"}],"rustflags":[],"config":8247474407144887393,"compile_kind":0}

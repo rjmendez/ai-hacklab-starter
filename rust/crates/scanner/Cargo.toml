@@ -1,0 +1,29 @@
+[package]
+name = "scanner"
+description = "High-throughput async pipeline scanner — Redis queue, parallel workers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "scanner"
+path = "src/main.rs"
+
+[dependencies]
+mesh-queue = { path = "../mesh-queue" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+sha2 = "0.10"
+hex = "0.4"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive", "env"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[lints]
+workspace = true
