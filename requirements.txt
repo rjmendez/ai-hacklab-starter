@@ -15,9 +15,12 @@ anyio>=4.3.0
 
 # MCP research notes server — stdlib only (sqlite3, json, uuid) — no extra deps
 
-# Optional: PostgreSQL support (memory DB, audit DB)
-# Uncomment if using MEMORY_DB_DSN or AUDIT_DB_DSN:
+# Backup codes for TOTP (optional but recommended)
+# bcrypt>=4.1.0
+
+# Optional: PostgreSQL support (memory DB, telemetry DB)
+# Uncomment if using TELEMETRY_DSN or AUDIT_DB_DSN:
 # psycopg2-binary>=2.9.9
 
-# Optional: GPU/Ollama inference (beta agent)
+# Optional: GPU/Ollama inference (beta agent, gpu-worker blueprint)
 # ollama>=0.1.0

@@ -355,7 +355,16 @@ app = FastAPI(title=f"A2A Server — {AGENT_NAME}", version="1.0.0")
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "agent": AGENT_NAME}
+    r = _get_redis()
+    return {
+        "status":         "ok",
+        "agent":          AGENT_NAME,
+        "totp_2fa":       bool(TOTP_SEED),
+        "auth_scheme":    "bearer+totp" if TOTP_SEED else "bearer",
+        "skills_loaded":  len(SKILL_HANDLERS),
+        "skills":         list(SKILL_HANDLERS.keys()),
+        "redis":          r is not None,
+    }
 
 
 @app.get("/.well-known/agent-card.json")
@@ -438,13 +447,25 @@ async def a2a_endpoint(
             skill_id, caller, latency_ms,
         )
         _log_call(skill_id, caller, True, latency_ms)
-        return JSONResponse(content=_success_response(rpc_id, {"output": result}))
+        response_body = _success_response(rpc_id, {
+            "task_id":      str(__import__("uuid").uuid4()),
+            "status":       "completed",
+            "output":       result,
+            "agent":        AGENT_NAME,
+            "peer":         caller,
+            "latency_ms":   latency_ms,
+        })
+        return JSONResponse(
+            content=response_body,
+            headers={"X-Agent-ID": AGENT_NAME},
+        )
     except Exception as exc:
         latency_ms = int((time.monotonic() - t0) * 1000)
         logger.exception("skill=%s raised: %s", skill_id, exc)
         _log_call(skill_id, caller, False, latency_ms)
         return JSONResponse(
-            content=_error_response(rpc_id, -32603, "Internal error", str(exc))
+            content=_error_response(rpc_id, -32603, "Internal error", str(exc)),
+            headers={"X-Agent-ID": AGENT_NAME},
         )
 
 
