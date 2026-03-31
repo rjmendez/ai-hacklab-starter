@@ -33,6 +33,10 @@ pub struct AgentRegistry {
 }
 
 impl AgentRegistry {
+    pub fn empty() -> Self {
+        Self { agents: Default::default() }
+    }
+
     pub fn load(path: &Path) -> Result<Self, RegistryError> {
         let raw = std::fs::read_to_string(path)?;
         #[derive(Deserialize)]
@@ -63,6 +67,10 @@ pub struct DispatchPolicy {
 }
 
 impl DispatchPolicy {
+    pub fn empty() -> Self {
+        Self { rules: vec![] }
+    }
+
     /// Build from the default mesh ownership rules.
     pub fn default_mesh() -> Self {
         let rules = vec![

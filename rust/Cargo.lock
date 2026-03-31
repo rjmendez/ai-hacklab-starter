@@ -881,7 +881,10 @@ version = "0.1.0"
 dependencies = [
  "a2a-client",
  "api",
+ "chrono",
  "clap",
+ "redis",
+ "router",
  "runtime",
  "serde",
  "serde_json",
@@ -889,6 +892,7 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
