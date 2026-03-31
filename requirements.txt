@@ -1,0 +1,23 @@
+# Core A2A server
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pyotp>=2.9.0
+redis>=5.0.0
+
+# HTTP client (used by gamma skill handlers)
+requests>=2.31.0
+
+# DNS lookups (used by gamma skill handlers — falls back to socket if absent)
+dnspython>=2.6.0
+
+# Queue worker async support
+anyio>=4.3.0
+
+# MCP research notes server — stdlib only (sqlite3, json, uuid) — no extra deps
+
+# Optional: PostgreSQL support (memory DB, audit DB)
+# Uncomment if using MEMORY_DB_DSN or AUDIT_DB_DSN:
+# psycopg2-binary>=2.9.9
+
+# Optional: GPU/Ollama inference (beta agent)
+# ollama>=0.1.0

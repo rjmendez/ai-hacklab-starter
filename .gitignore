@@ -1,37 +1,39 @@
-# Python
+# ai-hacklab-starter .gitignore
+
+# ── Secrets & generated configs (never commit these) ─────────────────────────
+.env
+dispatch/key_pools.json
+dispatch/agent_registry.json
+
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
+.Python
 *.egg
 *.egg-info/
 dist/
 build/
-.eggs/
-*.so
-
-# Virtual environments
+*.whl
 .venv/
 venv/
 env/
-ENV/
+pip-wheel-metadata/
 
-# Secrets — never commit these
-.env
-key_pools.json
-agent_registry.json
-*.totp_state.json
-secrets.env
+# ── Databases & research artifacts ───────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+backups/
 
-# Editors
-.vscode/
+# ── Docker ───────────────────────────────────────────────────────────────────
+*.log
+
+# ── IDE / OS ─────────────────────────────────────────────────────────────────
 .idea/
+.vscode/
 *.swp
 *.swo
-
-# OS
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/

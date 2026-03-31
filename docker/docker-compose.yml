@@ -1,11 +1,174 @@
-version: '3.8'
+version: "3.8"
+
+# AI HackLab Starter — Full Stack
+#
+# Services:
+#   redis         — shared message queue and KV store for all agents
+#   litellm-proxy — unified LLM API proxy (OpenAI-compatible)
+#   agent-alpha   — coordinator: task routing, Docker ops, queue management (port 8201)
+#   agent-beta    — GPU compute: local Ollama inference, hash identification (port 8202)
+#   agent-gamma   — recon: OSINT, CT enum, web fetch, DNS, whois, wifi scan (port 8203)
+#   agent-delta   — data ops: batch processing, DB queries, export, Redis sync (port 8204)
+#
+# Usage:
+#   make setup && make up
+#   make status
+
 services:
-  agent-alpha:
-    image: ai-agent-alpha:latest
-    env_file:
-      - ../.env
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
     restart: always
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD}"
+      --save 60 1
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  litellm-proxy:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: always
+    environment:
+      LITELLM_MASTER_KEY: "${LITELLM_API_KEY}"
+      OPENAI_API_KEY:    "${OPENAI_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      GOOGLE_API_KEY:    "${GOOGLE_API_KEY:-}"
+    volumes:
+      - ./litellm_config.example.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Agents ─────────────────────────────────────────────────────────────────
+
+  agent-alpha:
+    build:
+      context: ..
+      dockerfile: agents/alpha/Dockerfile
+    restart: always
+    environment:
+      AGENT_NAME:        alpha
+      AGENT_TOKEN:       "${AGENT_ALPHA_TOKEN}"
+      AGENT_TOTP_SEED:   "${AGENT_TOTP_SEED}"
+      REDIS_HOST:        redis
+      REDIS_PORT:        "6379"
+      REDIS_PASSWORD:    "${REDIS_PASSWORD}"
+      LITELLM_BASE_URL:  "http://litellm-proxy:4000/v1"
+      LITELLM_API_KEY:   "${LITELLM_API_KEY}"
+      A2A_PORT:          "8201"
+    ports:
+      - "127.0.0.1:8201:8201"
+    depends_on:
+      redis:
+        condition: service_healthy
+      litellm-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8201/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   agent-beta:
-    image: ai-agent-beta:latest
-    env_file:
-        - ../.env 
+    build:
+      context: ..
+      dockerfile: agents/beta/Dockerfile
+    restart: always
+    environment:
+      AGENT_NAME:        beta
+      AGENT_TOKEN:       "${AGENT_BETA_TOKEN}"
+      AGENT_TOTP_SEED:   "${AGENT_TOTP_SEED}"
+      REDIS_HOST:        redis
+      REDIS_PORT:        "6379"
+      REDIS_PASSWORD:    "${REDIS_PASSWORD}"
+      LITELLM_BASE_URL:  "http://litellm-proxy:4000/v1"
+      LITELLM_API_KEY:   "${LITELLM_API_KEY}"
+      OLLAMA_HOST:       "${OLLAMA_HOST:-http://host.docker.internal:11434}"
+      A2A_PORT:          "8202"
+    ports:
+      - "127.0.0.1:8202:8202"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8202/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  agent-gamma:
+    build:
+      context: ..
+      dockerfile: agents/gamma/Dockerfile
+    restart: always
+    environment:
+      AGENT_NAME:        gamma
+      AGENT_TOKEN:       "${AGENT_GAMMA_TOKEN}"
+      AGENT_TOTP_SEED:   "${AGENT_TOTP_SEED}"
+      REDIS_HOST:        redis
+      REDIS_PORT:        "6379"
+      REDIS_PASSWORD:    "${REDIS_PASSWORD}"
+      LITELLM_BASE_URL:  "http://litellm-proxy:4000/v1"
+      LITELLM_API_KEY:   "${LITELLM_API_KEY}"
+      A2A_PORT:          "8203"
+    ports:
+      - "127.0.0.1:8203:8203"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8203/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  agent-delta:
+    build:
+      context: ..
+      dockerfile: agents/delta/Dockerfile
+    restart: always
+    environment:
+      AGENT_NAME:        delta
+      AGENT_TOKEN:       "${AGENT_DELTA_TOKEN}"
+      AGENT_TOTP_SEED:   "${AGENT_TOTP_SEED}"
+      REDIS_HOST:        redis
+      REDIS_PORT:        "6379"
+      REDIS_PASSWORD:    "${REDIS_PASSWORD}"
+      LITELLM_BASE_URL:  "http://litellm-proxy:4000/v1"
+      LITELLM_API_KEY:   "${LITELLM_API_KEY}"
+      A2A_PORT:          "8204"
+    ports:
+      - "127.0.0.1:8204:8204"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8204/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+    driver: local
