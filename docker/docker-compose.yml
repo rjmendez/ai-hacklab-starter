@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  agent-alpha:
+    image: ai-agent-alpha:latest
+    env_file:
+      - ../.env
+    restart: always
+  agent-beta:
+    image: ai-agent-beta:latest
+    env_file:
+        - ../.env 
