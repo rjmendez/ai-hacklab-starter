@@ -1,98 +1,175 @@
+#!/usr/bin/env python3
 """
-scouts/checkpoint.py — Redis-backed checkpoint for long-running scouts.
+checkpoint.py — Redis-backed checkpoint for long-running scouts.
 
-Solves the timeout-and-resume problem: scouts save progress mid-run and
-resume from where they left off after a restart, crash, or timeout.
-
-Usage:
-    from scouts.checkpoint import RedisCheckpoint
-
-    cp = RedisCheckpoint("iris:scan-run-001")
-
-    # Save progress
-    cp.save({"last_offset": 1500, "processed": 1500, "total": 6000})
-
-    # Resume on next run
-    state = cp.load()
-    if state:
-        start_from = state["last_offset"]
-    else:
-        start_from = 0  # fresh start
-
-    # Mark complete (clears checkpoint)
-    cp.complete()
+Solves the Rex timeout problem: scouts can save progress mid-run and
+resume from where they left off after a restart or timeout.
 """
 
 import json
-import os
 import time
+
 import redis
 
 
-def _get_client() -> redis.Redis:
+# ── Redis connection ──────────────────────────────────────────────────────────
+
+def _get_redis() -> redis.Redis:
+    import os
     return redis.Redis(
-        host=os.environ.get("REDIS_HOST", "redis"),
+        host=os.environ.get("REDIS_HOST", "localhost"),
         port=int(os.environ.get("REDIS_PORT", "6379")),
         password=os.environ.get("REDIS_PASSWORD") or None,
         decode_responses=True,
-        socket_connect_timeout=3,
-        socket_timeout=3,
+        socket_connect_timeout=5,
+        socket_timeout=5,
     )
 
 
+# ── RedisCheckpoint ───────────────────────────────────────────────────────────
+
 class RedisCheckpoint:
     """
-    Redis-backed checkpoint for resumable scout runs.
+    Allows long-running scouts to save progress and resume after restart/timeout.
 
-    State is stored as JSON. A checkpoint that is never completed will
-    expire automatically after ttl_hours (default 48h) — preventing
-    stale state from blocking a fresh run indefinitely.
+    Usage pattern for Rex:
+        cp = RedisCheckpoint("rex:bucket-audit:2026-03-28")
+        if cp.exists():
+            state = cp.load()
+            start_from = state['last_table']
+        else:
+            start_from = None
 
-    Args:
-        run_id:    Unique ID for this run (e.g. "iris:scan:2026-04-01")
-        ttl_hours: How long to keep incomplete checkpoints.
+        # ... do work ...
+        cp.save({'last_table': current_table, 'rows_processed': n})
+
+        cp.clear()  # on completion
     """
 
-    def __init__(self, run_id: str, ttl_hours: int = 48):
-        self.key      = f"checkpoint:{run_id}"
-        self.ttl_secs = ttl_hours * 3600
-        self._r       = _get_client()
-
-    def save(self, state: dict) -> None:
+    def __init__(self, job_id: str, ttl_hours: int = 24):
         """
-        Save checkpoint state. Merges with existing state (partial updates ok).
-
-        Args:
-            state: Dict of any JSON-serializable values.
+        :param job_id:    Unique job identifier, e.g. "rex:bucket-audit:2026-03-28"
+        :param ttl_hours: How long to keep checkpoint before auto-expiring
         """
-        existing = self.load() or {}
-        existing.update(state)
-        existing["_saved_at"] = time.time()
-        self._r.setex(self.key, self.ttl_secs, json.dumps(existing))
+        self.job_id = job_id
+        self.key = f"checkpoint:{job_id}"
+        self.ttl_seconds = ttl_hours * 3600
+        self._r = _get_redis()
+
+    def save(self, progress: dict):
+        """
+        Save current progress state.
+        Automatically adds a 'saved_at' timestamp for debugging.
+        """
+        data = dict(progress)
+        data['_saved_at'] = time.time()
+        data['_job_id'] = self.job_id
+        self._r.setex(self.key, self.ttl_seconds, json.dumps(data))
 
     def load(self) -> dict | None:
         """
-        Load checkpoint state. Returns None if no checkpoint exists.
+        Load saved progress. Returns None if no checkpoint exists.
         """
         raw = self._r.get(self.key)
         if raw is None:
             return None
         try:
             return json.loads(raw)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ValueError):
             return None
 
-    def exists(self) -> bool:
-        """Return True if a checkpoint exists for this run."""
-        return bool(self._r.exists(self.key))
-
-    def complete(self) -> None:
-        """
-        Mark this run as complete — deletes the checkpoint.
-        Call this at the end of a successful run.
-        """
+    def clear(self):
+        """Remove checkpoint (call on successful job completion)."""
         self._r.delete(self.key)
 
+    def exists(self) -> bool:
+        """Check if a checkpoint exists for this job."""
+        return bool(self._r.exists(self.key))
+
     def ttl(self) -> int:
-        """Return seconds until this checkpoint expires (-1 = no TTL, -2 = not found)."""
+        """Return remaining TTL in seconds (-1 = no expiry, -2 = key gone)."""
         return self._r.ttl(self.key)
+
+    def update(self, **kwargs):
+        """
+        Merge kwargs into existing checkpoint state (load → merge → save).
+        Creates a new checkpoint if none exists.
+        """
+        state = self.load() or {}
+        state.update(kwargs)
+        self.save(state)
+
+    def __repr__(self):
+        exists = self.exists()
+        ttl = self.ttl() if exists else -2
+        return f"RedisCheckpoint(job_id={self.job_id!r}, exists={exists}, ttl={ttl}s)"
+
+
+# ── Self-test ─────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    print("=== RedisCheckpoint self-test ===")
+
+    JOB_ID = "test:selftest:checkpoint"
+    cp = RedisCheckpoint(JOB_ID, ttl_hours=1)
+
+    # Clean state
+    cp.clear()
+    assert not cp.exists(), "Expected no checkpoint initially"
+    assert cp.load() is None, "Expected None from load() when empty"
+    print("✓ No checkpoint on fresh start")
+
+    # Save state
+    cp.save({'last_table': 'firebase_targets', 'rows_processed': 42})
+    assert cp.exists(), "Expected checkpoint to exist after save()"
+    print("✓ save() persists checkpoint")
+
+    # Load state
+    state = cp.load()
+    assert state is not None
+    assert state['last_table'] == 'firebase_targets'
+    assert state['rows_processed'] == 42
+    assert '_saved_at' in state  # auto-added timestamp
+    assert '_job_id' in state
+    print(f"✓ load() returns correct state: last_table={state['last_table']}, rows={state['rows_processed']}")
+
+    # TTL check
+    ttl = cp.ttl()
+    assert 0 < ttl <= 3600, f"Expected TTL ~3600s, got {ttl}"
+    print(f"✓ TTL = {ttl}s (correct)")
+
+    # update() merges
+    cp.update(rows_processed=100, last_row_id=9999)
+    state2 = cp.load()
+    assert state2['last_table'] == 'firebase_targets'  # preserved
+    assert state2['rows_processed'] == 100             # updated
+    assert state2['last_row_id'] == 9999               # new field
+    print("✓ update() merges correctly")
+
+    # clear on completion
+    cp.clear()
+    assert not cp.exists()
+    assert cp.load() is None
+    print("✓ clear() removes checkpoint")
+
+    # Simulate the Rex usage pattern
+    print("\n--- Simulating Rex resume pattern ---")
+    cp2 = RedisCheckpoint("rex:bucket-audit:test-run", ttl_hours=24)
+    cp2.clear()
+
+    if cp2.exists():
+        start_from = cp2.load()['last_table']
+        print(f"  Resuming from: {start_from}")
+    else:
+        start_from = None
+        print("  No checkpoint — starting fresh")
+
+    for i, table in enumerate(['targets', 'buckets', 'findings']):
+        # simulate work
+        cp2.save({'last_table': table, 'rows_processed': i * 100})
+        print(f"  Processed table '{table}', checkpoint saved")
+
+    cp2.clear()
+    print("  Job complete, checkpoint cleared")
+
+    print(f"\n✅ All RedisCheckpoint tests passed.")
