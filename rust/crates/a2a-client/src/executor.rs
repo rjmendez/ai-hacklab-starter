@@ -37,16 +37,11 @@ impl From<RegistryError> for ToolError {
 pub struct A2aToolExecutor {
     registry: AgentRegistry,
     policy: DispatchPolicy,
-    rt: tokio::runtime::Handle,
 }
 
 impl A2aToolExecutor {
     pub fn new(registry: AgentRegistry, policy: DispatchPolicy) -> Self {
-        Self {
-            registry,
-            policy,
-            rt: tokio::runtime::Handle::current(),
-        }
+        Self { registry, policy }
     }
 
     /// Execute a tool call by routing to the owning agent.
@@ -63,7 +58,9 @@ impl A2aToolExecutor {
         );
 
         let input_val: Value = serde_json::from_str(input).unwrap_or(Value::Null);
-        let result = self.rt.block_on(client.call(tool_name, input_val))?;
+        let result = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(client.call(tool_name, input_val))
+        })?;
         Ok(result.to_string())
     }
 }

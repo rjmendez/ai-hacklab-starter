@@ -32,12 +32,11 @@ struct RouterApiClient {
     router: Arc<Router>,
     model: Option<String>,
     tier: Tier,
-    rt: tokio::runtime::Handle,
 }
 
 impl RouterApiClient {
     fn new(router: Arc<Router>, model: Option<String>, tier: Tier) -> Self {
-        Self { router, model, tier, rt: tokio::runtime::Handle::current() }
+        Self { router, model, tier }
     }
 }
 
@@ -75,8 +74,9 @@ impl ApiClient for RouterApiClient {
             agent: None,
         };
 
-        let resp = self.rt.block_on(self.router.complete(llm_req))
-            .map_err(|e| RuntimeError::new(e.to_string()))?;
+        let resp = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(self.router.complete(llm_req))
+        }).map_err(|e| RuntimeError::new(e.to_string()))?;
 
         let usage = TokenUsage {
             input_tokens: resp.input_tokens,
@@ -167,7 +167,7 @@ struct Cli {
     session_file: Option<PathBuf>,
 
     /// Redis URL for spend tracking
-    #[arg(long, env = "REDIS_URL", default_value = "redis://:MrPink-A2A-1b8f9e2d4a@localhost:6379")]
+    #[arg(long, env = "REDIS_URL", default_value = "redis://localhost:6379")]
     redis_url: String,
 
     /// Pool ID for spend tracking

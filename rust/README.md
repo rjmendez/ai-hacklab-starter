@@ -115,8 +115,8 @@ Every `mesh-agent` invocation writes to Redis after each turn. No separate proce
 - `mesh_llm_latency_seconds{model, agent}` — p50/p95/p99
 - `mesh_llm_errors_total{model, agent, error_type}` — error rate
 
-Grafana dashboard at `https://openclaw.tail9c4667.ts.net:3000` already has the
-Prometheus datasource configured (MrPink service account token in TOOLS.md).
+Grafana dashboard in the internal observability stack exposes these metrics.
+Access via your organization's SSO; do not store service account tokens in this repository.
 
 ### 3. Persistent: mrpink-memory PostgreSQL
 For long-term cost analysis and audit trail. `router::spend` optionally writes to:
