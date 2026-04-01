@@ -37,3 +37,4 @@ backups/
 *.swo
 .DS_Store
 Thumbs.db
+rust/target/
