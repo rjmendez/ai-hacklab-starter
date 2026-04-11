@@ -38,3 +38,17 @@ backups/
 .DS_Store
 Thumbs.db
 rust/target/
+
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+*.min.js
+*.min.css
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.DS_Store
